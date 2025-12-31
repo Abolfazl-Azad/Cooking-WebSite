@@ -9,6 +9,9 @@ string ReportHandler::handleReport(User* currentUser, map<string, string>& args)
     }
 
     if (args[ArgKeys::TYPE] == ReportTypes::REFRIGERATOR_STATUS) {
+        if (currentUser->getRole() != VISITOR) {
+            return Messages::PERMISSION_DENIED;
+        }
         return handleRefrigeratorReport(currentUser);
     }
 

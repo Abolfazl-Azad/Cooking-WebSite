@@ -71,30 +71,47 @@ string RecommenderSystem::getRecommendations(string recommenderName, User* user)
 }
 
 vector<Recipe> RecommenderSystem::matchBasedAlgorithm(const User* user) {
-    vector<Recipe> matches;
+    vector<pair<Recipe, int>> scored;
     auto userShelf = user->getShelf();
-    
+    unordered_set<string> available;
+    available.reserve(userShelf.size());
+
+    for (const auto& item : userShelf) {
+        available.insert(toLowerCase(item.first));
+    }
+
     for (const auto& r : allRecipes) {
-        bool canCook = true;
+        int overlapCount = 0;
+        int totalCount = 0;
+        unordered_set<string> seen;
+
         for (const auto& ing : r.getIngredients()) {
-            string searchName = toLowerCase(ing.first);
-            int reqAmount = ing.second;
-            
-            if (userShelf.find(searchName) == userShelf.end() || 
-                userShelf.at(searchName) < reqAmount) {
-                canCook = false;
-                break;
+            string ingName = toLowerCase(ing.first);
+            if (seen.insert(ingName).second) {
+                ++totalCount;
+                if (available.find(ingName) != available.end()) {
+                    ++overlapCount;
+                }
             }
         }
-        if (canCook) {
-            matches.push_back(r);
-        }
+
+        scored.push_back({r, totalCount - overlapCount});
     }
-    
-    sort(matches.begin(), matches.end(), [](const Recipe& a, const Recipe& b) {
-        return a.getName() > b.getName();
+
+    sort(scored.begin(), scored.end(),
+         [](const pair<Recipe, int>& a, const pair<Recipe, int>& b) {
+        if (a.second != b.second) {
+            return a.second < b.second;
+        }
+        return a.first.getName() > b.first.getName();
     });
-    
+
+    vector<Recipe> matches;
+    matches.reserve(scored.size());
+    for (const auto& item : scored) {
+        matches.push_back(item.first);
+    }
+
     return matches;
 }
 
@@ -219,7 +236,7 @@ int RecommenderSystem::calculateAdditionalCost(const Recipe& recipe,
 }
 
 string RecommenderSystem::formatRecipeOutput(const Recipe& recipe) {
-    string res = recipe.getName() + ":\n";
+    string res = recipe.getName() + ": \n";
     
     res += "Ingredients: ";
     auto ings = recipe.getIngredients();
@@ -228,7 +245,7 @@ string RecommenderSystem::formatRecipeOutput(const Recipe& recipe) {
         if (i != ings.size() - 1)
             res += ", ";
     }
-    res += "\n";
+    res += " \n";
     
     res += OutputFormats::CALORIES_LABEL + to_string(calculateRecipeCalories(recipe)) + "\n";
     

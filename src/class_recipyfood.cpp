@@ -159,12 +159,20 @@ string recipyfood::process(string line)
             {
                 return Messages::PERMISSION_DENIED;
             }
+            if (authManager.getCurrentUser()->getRole() != VISITOR)
+            {
+                return Messages::PERMISSION_DENIED;
+            }
             return recommenderSystem->getRecommendersList();
         }
 
         if (command == Commands::RECOMMENDATIONS)
         {
             if (!authManager.isLoggedIn())
+            {
+                return Messages::PERMISSION_DENIED;
+            }
+            if (authManager.getCurrentUser()->getRole() != VISITOR)
             {
                 return Messages::PERMISSION_DENIED;
             }
