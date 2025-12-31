@@ -6,7 +6,7 @@ SRC_DIR = src
 BUILD_DIR = build
 INCLUDE_DIR = includes
 
-TARGET = UTCOOK
+TARGET = UTWhat2Cook
 
 SRCS = $(wildcard $(SRC_DIR)/*.cpp)
 
