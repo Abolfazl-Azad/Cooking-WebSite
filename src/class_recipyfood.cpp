@@ -52,7 +52,33 @@ string recipyfood::process(string line)
             ss.get();
     }
 
-    map<string, string> args = InputParser::parseArguments(ss);
+    map<string, string> args;
+    if (method == HttpMethods::POST && command == Commands::SUGGESTION) {
+        string action;
+        if (!(ss >> action)) {
+            return Messages::BAD_REQUEST;
+        }
+        args = InputParser::parseArguments(ss);
+        args[ArgKeys::ACTION] = action;
+    } else if (method == HttpMethods::GET && command == Commands::REPORT) {
+        string firstToken;
+        if (!(ss >> firstToken)) {
+            return Messages::BAD_REQUEST;
+        }
+        if (firstToken == ArgKeys::TYPE) {
+            string typeValue;
+            if (!(ss >> typeValue)) {
+                return Messages::BAD_REQUEST;
+            }
+            args = InputParser::parseArguments(ss);
+            args[ArgKeys::TYPE] = typeValue;
+        } else {
+            args = InputParser::parseArguments(ss);
+            args[ArgKeys::TYPE] = firstToken;
+        }
+    } else {
+        args = InputParser::parseArguments(ss);
+    }
 
     if (method == HttpMethods::POST)
     {
@@ -85,6 +111,37 @@ string recipyfood::process(string line)
         if (command == Commands::RECIPE)
         {
             return commandHandler->handlePostRecipe(args);
+        }
+
+        if (command == Commands::LIKE)
+        {
+            return commandHandler->handlePostLike(args);
+        }
+
+        if (command == Commands::SUGGESTION)
+        {
+            return commandHandler->handlePostSuggestion(args);
+        }
+
+        if (command == Commands::ADD_RECOMMENDER)
+        {
+            if (!authManager.isLoggedIn())
+            {
+                return Messages::PERMISSION_DENIED;
+            }
+            if (authManager.getCurrentUser()->getRole() != VISITOR)
+            {
+                return Messages::PERMISSION_DENIED;
+            }
+            if (args.find(ArgKeys::NAME) == args.end() ||
+                args.find(ArgKeys::INGREDIENTS) == args.end())
+            {
+                return Messages::BAD_REQUEST;
+            }
+
+            vector<string> ingredients = InputParser::splitString(args[ArgKeys::INGREDIENTS],
+                                                                  DELIMITER_INGREDIENTS);
+            return recommenderSystem->addRecommender(args[ArgKeys::NAME], ingredients);
         }
     }
     else if (method == HttpMethods::PUT)
