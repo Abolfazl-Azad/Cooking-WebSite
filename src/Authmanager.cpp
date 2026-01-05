@@ -67,3 +67,7 @@ string AuthManager::logout() {
     currentUser = nullptr;
     return Messages::OK;
 }
+
+void AuthManager::setCurrentUser(User* user) {
+    currentUser = user;
+}

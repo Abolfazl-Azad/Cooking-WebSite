@@ -22,6 +22,7 @@ public:
     
     User* getCurrentUser() const { return currentUser; }
     bool isLoggedIn() const { return currentUser != nullptr; }
+    void setCurrentUser(User* user);
 };
 
 #endif
