@@ -48,6 +48,7 @@ namespace Messages {
     const string ALREADY_EXISTS = "Already Exists";
     const string EMPTY = "Empty";
     const string NO_ITEMS_IN_FRIDGE = "No item exists in the refrigerator.";
+    const string CHEF_HAS_NO_RECIPE = "This chef has no recipe.";
 }
 
 namespace Commands {
@@ -56,6 +57,9 @@ namespace Commands {
     const string LOGOUT = "logout";
     const string RECIPE = "recipe";
     const string INGREDIENT = "ingredient";
+    const string LIKE = "like";
+    const string SUGGESTION = "suggestion";
+    const string ADD_RECOMMENDER = "add_recommender";
     const string RECOMMENDERS = "recommenders";
     const string RECOMMENDATIONS = "recommendations";
     const string REPORT = "report";
@@ -77,10 +81,12 @@ namespace Recommenders {
     const string MATCH_BASED = "Match based recommender";
     const string COST_BASED = "Cost based recommender";
     const string CALORIE_BASED = "Calorie based recommender";
+    const string MOST_LIKED_BASE = "Most-liked base recommender";
 }
 
 namespace ReportTypes {
     const string REFRIGERATOR_STATUS = "refrigerator_status";
+    const string MOST_LIKED = "most_liked";
 }
 
 namespace OutputFormats {
@@ -101,6 +107,10 @@ namespace ArgKeys {
     const string NAME = "name";
     const string AMOUNT = "amount";
     const string TYPE = "type";
+    const string ACTION = "action";
+    const string RECIPE = "recipe";
+    const string INGREDIENT = "ingredient";
+    const string COUNT = "count";
 }
 
 #endif
