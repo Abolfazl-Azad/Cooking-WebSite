@@ -4,18 +4,26 @@
 CommandHandler::CommandHandler(vector<Recipe>& recipes, 
                                vector<Ingredient>& ingredients,
                                AuthManager& auth)
-    : allRecipes(recipes), allIngredients(ingredients), authManager(auth) {}
+    : allRecipes(recipes),
+      allIngredients(ingredients),
+      authManager(auth),
+      suggestionHandler(recipes, ingredients),
+      reportHandler(recipes) {}
 
 string CommandHandler::toLowerCase(string str) {
     return InputParser::toLowerCase(str);
 }
 
 bool CommandHandler::recipeExists(string title) {
-    for (const auto& r : allRecipes) {
+    return findRecipe(title) != nullptr;
+}
+
+Recipe* CommandHandler::findRecipe(const string& title) {
+    for (auto& r : allRecipes) {
         if (r.getName() == title)
-            return true;
+            return &r;
     }
-    return false;
+    return nullptr;
 }
 
 bool CommandHandler::isValidIngredient(string name) {
@@ -25,24 +33,6 @@ bool CommandHandler::isValidIngredient(string name) {
             return true;
     }
     return false;
-}
-
-string CommandHandler::getIngredientCategory(string name) {
-    string searchName = toLowerCase(name);
-    for (const auto& ing : allIngredients) {
-        if (toLowerCase(ing.getName()) == searchName)
-            return ing.getCategory();
-    }
-    return "";
-}
-
-int CommandHandler::getIngredientPrice(string name) {
-    string searchName = toLowerCase(name);
-    for (const auto& ing : allIngredients) {
-        if (toLowerCase(ing.getName()) == searchName)
-            return ing.getPrice();
-    }
-    return 0;
 }
 
 string CommandHandler::handlePostRecipe(map<string, string>& args) {
@@ -69,6 +59,7 @@ string CommandHandler::handlePostRecipe(map<string, string>& args) {
     }
     
     Recipe newRecipe(title);
+    newRecipe.setOwner(currentUser->getUsername());
     
     vector<string> ingParts = InputParser::splitString(ingredientsStr, ';');
     for (const string& part : ingParts) {
@@ -100,6 +91,29 @@ string CommandHandler::handlePostRecipe(map<string, string>& args) {
     
     allRecipes.push_back(newRecipe);
     return Messages::OK;
+}
+
+string CommandHandler::handlePostLike(map<string, string>& args) {
+    User* currentUser = authManager.getCurrentUser();
+    if (currentUser == nullptr || currentUser->getRole() != VISITOR) {
+        return Messages::PERMISSION_DENIED;
+    }
+
+    if (args.find(ArgKeys::RECIPE) == args.end()) {
+        return Messages::BAD_REQUEST;
+    }
+
+    Recipe* recipe = findRecipe(args[ArgKeys::RECIPE]);
+    if (recipe == nullptr) {
+        return Messages::NOT_FOUND;
+    }
+
+    recipe->addLike(currentUser->getUsername());
+    return Messages::OK;
+}
+
+string CommandHandler::handlePostSuggestion(map<string, string>& args) {
+    return suggestionHandler.handlePostSuggestion(authManager.getCurrentUser(), args);
 }
 
 string CommandHandler::handlePutIngredient(map<string, string>& args) {
@@ -142,34 +156,5 @@ string CommandHandler::handleGetReport(map<string, string>& args) {
         return Messages::PERMISSION_DENIED;
     }
     
-    if (args.find(ArgKeys::TYPE) == args.end() || args[ArgKeys::TYPE] != "refrigerator_status") {
-        return Messages::BAD_REQUEST;
-    }
-    
-    auto shelfMap = currentUser->getShelf();
-    
-    if (shelfMap.empty()) {
-        return Messages::NO_ITEMS_IN_FRIDGE;
-    }
-    
-    vector<pair<string, int>> shelfVec;
-    for (auto const& item : shelfMap) {
-        shelfVec.push_back(item);
-    }
-    
-    sort(shelfVec.begin(), shelfVec.end(), 
-         [](const pair<string, int>& a, const pair<string, int>& b) {
-        return a.first > b.first;
-    });
-    
-    string output = OutputFormats::FRIDGE_HEADER + currentUser->getUsername() + ":\n";
-    
-    for (size_t i = 0; i < shelfVec.size(); ++i) {
-        output += shelfVec[i].first + ":" + to_string(shelfVec[i].second);
-        if (i != shelfVec.size() - 1) {
-            output += "\n";
-        }
-    }
-    
-    return output;
+    return reportHandler.handleReport(currentUser, args);
 }
