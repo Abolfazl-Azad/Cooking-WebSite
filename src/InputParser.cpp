@@ -1,12 +1,14 @@
 
 #include "InputParser.hpp"
 
-string InputParser::toLowerCase(string str) {
+namespace InputParser {
+
+string toLowerCase(string str) {
     transform(str.begin(), str.end(), str.begin(), ::tolower);
     return str;
 }
 
-map<string, string> InputParser::parseArguments(stringstream& ss) {
+map<string, string> parseArguments(stringstream& ss) {
     map<string, string> args;
     string key, value;
     while (ss >> key) {
@@ -15,7 +17,7 @@ map<string, string> InputParser::parseArguments(stringstream& ss) {
             ss.get();
             nextChar = ss.peek();
         }
-        
+
         if (nextChar == '"') {
             ss.get();
             getline(ss, value, '"');
@@ -27,7 +29,7 @@ map<string, string> InputParser::parseArguments(stringstream& ss) {
     return args;
 }
 
-vector<string> InputParser::splitString(const string& str, char delimiter) {
+vector<string> splitString(const string& str, char delimiter) {
     vector<string> tokens;
     string token;
     stringstream ss(str);
@@ -35,4 +37,6 @@ vector<string> InputParser::splitString(const string& str, char delimiter) {
         tokens.push_back(token);
     }
     return tokens;
+}
+
 }
