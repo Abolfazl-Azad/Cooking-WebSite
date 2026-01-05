@@ -9,7 +9,6 @@ bool startsWith(const std::string& value, const std::string& prefix) {
     return value.rfind(prefix, 0) == 0;
 }
 }
-
 int AppRunner::run(int argc, char* argv[]) {
     if (argc < 3) {
         return 1;
