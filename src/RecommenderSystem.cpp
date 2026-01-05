@@ -8,13 +8,36 @@ string RecommenderSystem::toLowerCase(string str) {
     return InputParser::toLowerCase(str);
 }
 
-string RecommenderSystem::getRecommendersList() {
+vector<string> RecommenderSystem::getRecommenderNames() const {
+    vector<string> names = {
+        Recommenders::MATCH_BASED,
+        Recommenders::COST_BASED,
+        Recommenders::CALORIE_BASED,
+        Recommenders::MOST_LIKED_BASE
+    };
 
-    return OutputFormats::RECOMMENDERS_LIST;
+    for (const auto& custom : customRecommenders) {
+        names.push_back(custom.name);
+    }
+    return names;
+}
+
+string RecommenderSystem::getRecommendersList() {
+    vector<string> names = getRecommenderNames();
+
+    string output = "recommenders:\n";
+    for (size_t i = 0; i < names.size(); ++i) {
+        output += to_string(i + 1) + ". " + names[i];
+        if (i != names.size() - 1) {
+            output += "\n";
+        }
+    }
+    return output;
 }
 
 string RecommenderSystem::getRecommendations(string recommenderName, User* user) {
     vector<Recipe> finalRecipes;
+    bool foundCustom = false;
     
     if (recommenderName == Recommenders::MATCH_BASED) {
         finalRecipes = matchBasedAlgorithm(user);
@@ -22,8 +45,19 @@ string RecommenderSystem::getRecommendations(string recommenderName, User* user)
         finalRecipes = costBasedAlgorithm(user);
     } else if (recommenderName == Recommenders::CALORIE_BASED) {
         finalRecipes = calorieBasedAlgorithm(user);
+    } else if (recommenderName == Recommenders::MOST_LIKED_BASE) {
+        finalRecipes = mostLikedAlgorithm();
     } else {
-        return Messages::NOT_FOUND;
+        for (const auto& custom : customRecommenders) {
+            if (custom.name == recommenderName) {
+                finalRecipes = customRecommenderAlgorithm(custom.ingredients);
+                foundCustom = true;
+                break;
+            }
+        }
+        if (!foundCustom) {
+            return Messages::NOT_FOUND;
+        }
     }
     
     if (finalRecipes.empty())
@@ -42,30 +76,47 @@ string RecommenderSystem::getRecommendations(string recommenderName, User* user)
 }
 
 vector<Recipe> RecommenderSystem::matchBasedAlgorithm(const User* user) {
-    vector<Recipe> matches;
+    vector<pair<Recipe, int>> scored;
     auto userShelf = user->getShelf();
-    
+    unordered_set<string> available;
+    available.reserve(userShelf.size());
+
+    for (const auto& item : userShelf) {
+        available.insert(toLowerCase(item.first));
+    }
+
     for (const auto& r : allRecipes) {
-        bool canCook = true;
+        int overlapCount = 0;
+        int totalCount = 0;
+        unordered_set<string> seen;
+
         for (const auto& ing : r.getIngredients()) {
-            string searchName = toLowerCase(ing.first);
-            int reqAmount = ing.second;
-            
-            if (userShelf.find(searchName) == userShelf.end() || 
-                userShelf.at(searchName) < reqAmount) {
-                canCook = false;
-                break;
+            string ingName = toLowerCase(ing.first);
+            if (seen.insert(ingName).second) {
+                ++totalCount;
+                if (available.find(ingName) != available.end()) {
+                    ++overlapCount;
+                }
             }
         }
-        if (canCook) {
-            matches.push_back(r);
-        }
+
+        scored.push_back({r, totalCount - overlapCount});
     }
-    
-    sort(matches.begin(), matches.end(), [](const Recipe& a, const Recipe& b) {
-        return a.getName() > b.getName();
+
+    sort(scored.begin(), scored.end(),
+         [](const pair<Recipe, int>& a, const pair<Recipe, int>& b) {
+        if (a.second != b.second) {
+            return a.second < b.second;
+        }
+        return a.first.getName() > b.first.getName();
     });
-    
+
+    vector<Recipe> matches;
+    matches.reserve(scored.size());
+    for (const auto& item : scored) {
+        matches.push_back(item.first);
+    }
+
     return matches;
 }
 
@@ -102,6 +153,44 @@ vector<Recipe> RecommenderSystem::calorieBasedAlgorithm(const User* user) {
     });
     
     return sortedRecipes;
+}
+
+vector<Recipe> RecommenderSystem::mostLikedAlgorithm() {
+    vector<Recipe> sortedRecipes = allRecipes;
+    sort(sortedRecipes.begin(), sortedRecipes.end(),
+         [](const Recipe& a, const Recipe& b) {
+        if (a.getLikes() != b.getLikes()) {
+            return a.getLikes() > b.getLikes();
+        }
+        return a.getName() > b.getName();
+    });
+    return sortedRecipes;
+}
+
+vector<Recipe> RecommenderSystem::customRecommenderAlgorithm(const vector<string>& ingredients) {
+    vector<Recipe> matches;
+    for (const auto& recipe : allRecipes) {
+        bool hasAll = true;
+        for (const auto& ing : ingredients) {
+            if (!recipeHasIngredient(recipe, ing)) {
+                hasAll = false;
+                break;
+            }
+        }
+        if (hasAll) {
+            matches.push_back(recipe);
+        }
+    }
+
+    sort(matches.begin(), matches.end(),
+         [](const Recipe& a, const Recipe& b) {
+        if (a.getLikes() != b.getLikes()) {
+            return a.getLikes() > b.getLikes();
+        }
+        return a.getName() > b.getName();
+    });
+
+    return matches;
 }
 
 int RecommenderSystem::calculateRecipeCalories(const Recipe& recipe) {
@@ -152,7 +241,7 @@ int RecommenderSystem::calculateAdditionalCost(const Recipe& recipe,
 }
 
 string RecommenderSystem::formatRecipeOutput(const Recipe& recipe) {
-    string res = recipe.getName() + ":\n";
+    string res = recipe.getName() + ": \n";
     
     res += "Ingredients: ";
     auto ings = recipe.getIngredients();
@@ -161,7 +250,7 @@ string RecommenderSystem::formatRecipeOutput(const Recipe& recipe) {
         if (i != ings.size() - 1)
             res += ", ";
     }
-    res += "\n";
+    res += " \n";
     
     res += OutputFormats::CALORIES_LABEL + to_string(calculateRecipeCalories(recipe)) + "\n";
     
@@ -195,4 +284,68 @@ int RecommenderSystem::getIngredientPrice(string name) {
             return ing.getPrice();
     }
     return 0;
+}
+
+bool RecommenderSystem::isValidIngredient(string name) {
+    string searchName = toLowerCase(name);
+    for (const auto& ing : allIngredients) {
+        if (toLowerCase(ing.getName()) == searchName) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool RecommenderSystem::recipeHasIngredient(const Recipe& recipe, const string& ingredientName) {
+    string searchName = toLowerCase(ingredientName);
+    for (const auto& ing : recipe.getIngredients()) {
+        if (toLowerCase(ing.first) == searchName) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool RecommenderSystem::recommenderNameExists(const string& name) {
+    if (name == Recommenders::MATCH_BASED ||
+        name == Recommenders::COST_BASED ||
+        name == Recommenders::CALORIE_BASED ||
+        name == Recommenders::MOST_LIKED_BASE) {
+        return true;
+    }
+    for (const auto& custom : customRecommenders) {
+        if (custom.name == name) {
+            return true;
+        }
+    }
+    return false;
+}
+
+string RecommenderSystem::addRecommender(const string& name, const vector<string>& ingredients) {
+    if (name.empty() || ingredients.empty()) {
+        return Messages::BAD_REQUEST;
+    }
+
+    if (recommenderNameExists(name)) {
+        return Messages::ALREADY_EXISTS;
+    }
+
+    vector<string> normalizedIngredients;
+    for (const auto& ing : ingredients) {
+        if (ing.empty()) {
+            return Messages::BAD_REQUEST;
+        }
+        if (!isValidIngredient(ing)) {
+            return Messages::NOT_FOUND;
+        }
+        normalizedIngredients.push_back(toLowerCase(ing));
+    }
+
+    sort(normalizedIngredients.begin(), normalizedIngredients.end());
+    normalizedIngredients.erase(unique(normalizedIngredients.begin(), normalizedIngredients.end()),
+                                normalizedIngredients.end());
+
+    CustomRecommender custom{ name, normalizedIngredients };
+    customRecommenders.push_back(custom);
+    return Messages::OK;
 }
