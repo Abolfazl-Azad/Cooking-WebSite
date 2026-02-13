@@ -190,7 +190,7 @@ Response* BaseWebHandler::htmlResponse(const std::string& html) {
 }
 
 Response* BaseWebHandler::redirectTo(const std::string& url, const std::string& sessionId) {
-    Response* res = redirectResponse(url);
+    Response *res = Response::redirect(url);
     if (!sessionId.empty()) {
         res->setSessionId(sessionId);
     }
