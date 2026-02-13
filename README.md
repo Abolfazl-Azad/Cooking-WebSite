@@ -76,7 +76,7 @@ Output:
 ```
 
 ## Usage Notes
-- If CLI looks �stuck�, it is waiting for input on `stdin`. End input with an empty line.
+- If CLI looks stuck, it is waiting for input on `stdin`. End input with an empty line.
 - If you expect a web page, use the Web mode with a port argument (example above).
 
 ## License
