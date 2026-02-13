@@ -1,6 +1,6 @@
 # UTCook
 
-A polished, two-mode recipe platform for managing recipes, ingredients, and recommendations—built as a clean educational C++ project.
+A polished, two-mode recipe platform for managing recipes, ingredients, and recommendationsï¿½built as a clean educational C++ project.
 
 ## Why UTCook?
 UTCook brings together a minimal CLI engine and a small HTTP server to demonstrate core software concepts: input parsing, data management, role-based actions, and web request handling.
@@ -42,7 +42,7 @@ http://localhost:5000/
 ## Clone the Repository
 
 ```bash
-git clone <REPO_URL>
+git clone <https://github.com/Abolfazl-Azad/Cooking-WebSite>
 cd f04-a6-Abolfazl-Azad
 ```
 
@@ -76,7 +76,7 @@ Output:
 ```
 
 ## Usage Notes
-- If CLI looks “stuck”, it is waiting for input on `stdin`. End input with an empty line.
+- If CLI looks ï¿½stuckï¿½, it is waiting for input on `stdin`. End input with an empty line.
 - If you expect a web page, use the Web mode with a port argument (example above).
 
 ## License
